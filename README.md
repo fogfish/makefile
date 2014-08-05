@@ -1,16 +1,16 @@
 # Erlang build script
 
-There is a needs to build standalone Erlang software service deployable to hosts on network, such high-level package is called a _release_ in OTP. There was an attempt to use various build solution such as GNU autotools with custom M4 macros, application packaging as depicted by Erlang OTP In Action, rebar, reltool and erlang.mk. However, there is set of requirements which needs to be addressed to simplify production operation, see section below. Rebar and reltool with naive Makefile glue allows to achieve then. This Makefile script is one way to focus on these requirements. 
+There is a needs to build standalone Erlang software service deployable to hosts on network, such high-level package is called a _release_ in OTP. There was an attempt to use various build solution such as GNU autotools with custom M4 macros, application packaging as depicted by Erlang OTP In Action, rebar, reltool, erlang.mk and other. However, there is set of requirements which needs to be addressed to simplify production operation, see section below. Rebar and reltool with naive Makefile glue allows to achieve then. This Makefile script is one way to focus on these requirements. 
 
 ## Requirements
 
-The production deployment of Erlang application performed on hosts running vanilla Linux distribution. The major assumption -- Erlang/OTP runtime __is not__ installed on target host. The application needs to package and deliver Erlang runtime along with its code.
+1. The production deployment of Erlang application performed on hosts running vanilla Linux distribution. The major assumption -- Erlang/OTP runtime __is not__ installed on target host. The application needs to package and deliver Erlang runtime along with its code.
 
-The application life-cycle management is performed using _service_ management tools supplied by Linux distribution. The operation team can start / stop target application as a daemons using unified approach (e.g. service xxx start).
+1. The application life-cycle management is performed using _service_ management tools supplied by Linux distribution. The operation team can start / stop target application as a daemons using unified approach (e.g. service xxx start).
 
-The application development and operation is performed on various environment; the development environment is built on Mac OS; the production system uses Linux distributions. The developer shall have ability to assemble of production image without access to dedicated build machines.
+1. The application development and operation is performed on various environment; the development environment is built on Mac OS; the production system uses Linux distributions. The developer shall have ability to assemble of production image without access to dedicated build machines.
 
-The assembly of production images always managed from source code repository either private or public git. It slows down procedure of package assembly but ensure consistency of delivered code.
+1. The assembly of production images always managed from source code repository either private or public git. It slows down procedure of package assembly but ensure consistency of delivered code.
 
 ## Background
 
@@ -29,7 +29,7 @@ The show-case scenario of Makefile is shown on https://github.com/fogfish/hyperi
 
 ## Build library / application
 
-The library or standalone application is simples unit that implements some use-case, provides interface and exposes dependencies to other application. Please see Erlang manual for detail about the application concept http://www.erlang.org/doc/design_principles/applications.html
+The library or standalone application is simplest unit that implements some use-case, provides interface and exposes dependencies to other application. Please see Erlang manual for detail about the application concept http://www.erlang.org/doc/design_principles/applications.html
 
 Copy Makefile to root folder of application
 
