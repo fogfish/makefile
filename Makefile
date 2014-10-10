@@ -5,7 +5,9 @@
 ##   Makefile to build and release Erlang applications using
 ##   rebar, reltool, etc (see README for details)
 ##
-## @version 0.5.0
+##   application version schema (based on semantic version)
+##   ${APP}-${VSN}-r${GIT}.${ARCH}.${PLAT}
+## @version 0.6.0
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -18,17 +20,21 @@ PREFIX ?= /usr/local
 APP ?= $(notdir $(CURDIR))
 ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
-TAG  = ${ARCH}.${PLAT}
+HEAD?= $(shell git rev-parse --short HEAD)
+TAG  = r${HEAD}.${ARCH}.${PLAT}
 TEST?= priv/${APP}.benchmark
 S3   =
 GIT ?= 
 VMI  = 
 NET ?= en0
+USER =
+PASS =
 
 ## root path to benchmark framework
 BB     = ../basho_bench
 SSHENV = /tmp/ssh-agent.conf
 ADDR   = $(shell ifconfig ${NET} | sed -En 's/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+BRANCH = $(shell git symbolic-ref --short -q HEAD)
 
 ## erlang flags (make run only)
 EFLAGS = \
@@ -77,7 +83,7 @@ endif
 ## self-extracting bundle wrapper
 BUNDLE_INIT = PREFIX=${PREFIX}\nREL=${PREFIX}/${REL}${VARIANT}\nAPP=${APP}\nVSN=${VSN}\nLINE=\`grep -a -n 'BUNDLE:\x24' \x240\`\ntail -n +\x24(( \x24{LINE\x25\x25:*} + 1)) \x240 | gzip -vdc - | tar -C ${PREFIX} -xvf - > /dev/null\n
 BUNDLE_FREE = exit\nBUNDLE:\n
-BUILDER = "cd /tmp && git clone ${GIT}/${APP} && cd /tmp/${APP} && make && make pkg && sleep 300"
+BUILDER = cd /tmp && git clone -b ${BRANCH} ${GIT}/${APP} && cd /tmp/${APP} && make && make rel && sleep 300
 
 #####################################################################
 ##
@@ -117,35 +123,28 @@ docs:
 #####################################################################
 ifneq (${REL},)
 
-${PKG}: pkg
+pkg: ${PKG} 
 
-${TAR}: rel
+rel: ${TAR}
 
 ## assemble VM release
-rel: 
+ifeq (${PLAT},$(shell uname -s))
+${TAR}: 
 	@./rebar generate ${RFLAGS}; \
 	cd rel ; tar -zcf ../${TAR} ${REL}${VARIANT}/; cd -
-
-## package VM release to executable bundle
-ifeq (${PLAT},$(shell uname -s))
-pkg: rel/deploy.sh ${TAR}
-	@printf "${BUNDLE_INIT}"  > ${PKG} ; \
-	cat  rel/deploy.sh       >> ${PKG} ; \
-	printf  "${BUNDLE_FREE}" >> ${PKG} ; \
-	cat  ${TAR}              >> ${PKG} ; \
-	chmod ugo+x  ${PKG}                ; \
-	echo "==> bundle: ${PKG}"
 else
 ifneq (${VMI},)
-pkg:
+${TAR}:
 	@echo "==> docker run ${VMI}" ;\
-	I=`docker run -d ${VMI} /bin/sh -c ${BUILDER}` ;\
+	K=`cat  ${PASS}` ;\
+	A=`test ${USER} && echo "mkdir -p /root/.ssh && echo \"$$K\" > /root/.ssh/id_rsa && chmod 0700 /root/.ssh/id_rsa && echo -e \"Host *\n\tUser ${USER}\n\tStrictHostKeyChecking no\n\" > /root/.ssh/config &&"` ;\
+	I=`docker run -d -t ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
 	(docker attach $$I &) ;\
-	docker cp $$I:/tmp/${APP}/${PKG} . 1> /dev/null 2>&1 ;\
+	docker cp $$I:/tmp/${APP}/${TAR} . 1> /dev/null 2>&1 ;\
 	while [ $$? -ne 0 ] ;\
 	do \
    	sleep 10 ;\
-   	docker cp $$I:/tmp/${APP}/${PKG} . 1> /dev/null 2>&1 ;\
+   	docker cp $$I:/tmp/${APP}/${TAR} . 1> /dev/null 2>&1 ;\
 	done ;\
 	docker kill $$I ;\
 	docker rm $$I
@@ -153,9 +152,22 @@ pkg:
 endif
 endif
 
+## package VM release to executable bundle
+pkg: rel/deploy.sh ${TAR}
+	@printf "${BUNDLE_INIT}"  > ${PKG} ; \
+	cat  rel/deploy.sh       >> ${PKG} ; \
+	printf  "${BUNDLE_FREE}" >> ${PKG} ; \
+	cat  ${TAR}              >> ${PKG} ; \
+	chmod ugo+x  ${PKG}                ; \
+	echo "==> bundle: ${PKG}"
+
+## copy 'package' to s3
 ## copy 'package' to s3
 s3: ${PKG}
-	aws s3 cp ${PKG} ${S3}/${APP}-latest${VARIANT}.${TAG}.bundle
+	aws s3 cp ${PKG} ${S3}/${APP}-${TAG}${VARIANT}.bundle
+
+s3-latest: ${PKG}
+	aws s3 cp ${PKG} ${S3}/${APP}-latest${VARIANT}.bundle
 endif
 
 #####################################################################
