@@ -6,8 +6,9 @@
 ##   rebar, reltool, etc (see README for details)
 ##
 ##   application version schema (based on semantic version)
-##   ${APP}-${VSN}-r${GIT}.${ARCH}.${PLAT}
-## @version 0.6.0
+##   ${APP}-${VSN}+${GIT}.${ARCH}.${PLAT}
+##
+## @version 0.7.2
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -21,7 +22,7 @@ APP ?= $(notdir $(CURDIR))
 ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
 HEAD?= $(shell git rev-parse --short HEAD)
-TAG  = r${HEAD}.${ARCH}.${PLAT}
+TAG  = ${HEAD}.${ARCH}.${PLAT}
 TEST?= priv/${APP}.benchmark
 S3   =
 GIT ?= 
@@ -59,6 +60,7 @@ ifeq ($(wildcard rel/reltool.config),)
 	TAR =
 	PKG =
 else
+   IID  = $(shell cat rel/reltool.config | sed -n 's/{target_dir,.*\"\([^-]*\).*\"}./\1/p')
 	REL  = $(shell cat rel/reltool.config | sed -n 's/{target_dir,.*\"\(.*\)\"}./\1/p')
 	VSN  = $(shell echo ${REL} | sed -n 's/.*-\(.*\)/\1/p')
 ifeq (${VSN},)
@@ -72,11 +74,11 @@ else
 	RFLAGS  = target_dir=${REL}${VARIANT} overlay_vars=${ROOT}/${config}
 endif
 ifeq (${VSN},)
-	TAR = ${REL}${VARIANT}.${TAG}.tgz
-	PKG = ${REL}${VARIANT}.${TAG}.bundle
+	TAR = ${IID}${VARIANT}+${TAG}.tgz
+	PKG = ${IID}${VARIANT}+${TAG}.bundle
 else
-	TAR = ${REL}-${VSN}${VARIANT}.${TAG}.tgz
-	PKG = ${REL}-${VSN}${VARIANT}.${TAG}.bundle
+	TAR = ${IID}-${VSN}${VARIANT}+${TAG}.tgz
+	PKG = ${IID}-${VSN}${VARIANT}+${TAG}.bundle
 endif
 endif
 
@@ -103,8 +105,8 @@ clean:
 	rm -rf test.*-temp-data ; \
 	rm -rf tests ; \
 	rm -rf log ; \
-	rm -f  *.${TAG}.tgz ; \
-	rm -f  *.${TAG}.bundle
+	rm -f  *.tgz ; \
+	rm -f  *.bundle
 
 
 distclean: clean 
@@ -123,20 +125,20 @@ docs:
 #####################################################################
 ifneq (${REL},)
 
-pkg: ${PKG} 
-
 rel: ${TAR}
 
 ## assemble VM release
 ifeq (${PLAT},$(shell uname -s))
 ${TAR}: 
 	@./rebar generate ${RFLAGS}; \
-	cd rel ; tar -zcf ../${TAR} ${REL}${VARIANT}/; cd -
+	cd rel ; tar -zcf ${TAR} ${REL}${VARIANT}/ ; mv ${TAR} ../${TAR} ; cd - ;\
+	echo "==> tarball: ${TAR}"
+
 else
 ifneq (${VMI},)
 ${TAR}:
 	@echo "==> docker run ${VMI}" ;\
-	K=`cat  ${PASS}` ;\
+	K=`test ${PASS} && cat  ${PASS}` ;\
 	A=`test ${USER} && echo "mkdir -p /root/.ssh && echo \"$$K\" > /root/.ssh/id_rsa && chmod 0700 /root/.ssh/id_rsa && echo -e \"Host *\n\tUser ${USER}\n\tStrictHostKeyChecking no\n\" > /root/.ssh/config &&"` ;\
 	I=`docker run -d -t ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
 	(docker attach $$I &) ;\
@@ -164,10 +166,10 @@ pkg: rel/deploy.sh ${TAR}
 ## copy 'package' to s3
 ## copy 'package' to s3
 s3: ${PKG}
-	aws s3 cp ${PKG} ${S3}/${APP}-${TAG}${VARIANT}.bundle
+	aws s3 cp ${PKG} ${S3}/${APP}+${TAG}${VARIANT}.bundle
 
 s3-latest: ${PKG}
-	aws s3 cp ${PKG} ${S3}/${APP}-latest${VARIANT}.bundle
+	aws s3 cp ${PKG} ${S3}/${APP}+latest${VARIANT}.bundle
 endif
 
 #####################################################################
