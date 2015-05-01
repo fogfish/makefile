@@ -8,7 +8,7 @@
 ##   application version schema (based on semantic version)
 ##   ${APP}-${VSN}+${GIT}.${ARCH}.${PLAT}
 ##
-## @version 0.8.0
+## @version 0.8.1
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -41,9 +41,9 @@ BRANCH = $(shell git symbolic-ref --short -q HEAD)
 EFLAGS = \
 	-name ${APP}@${ADDR} \
 	-setcookie nocookie \
-	-pa ./ebin \
-	-pa deps/*/ebin \
-	-pa apps/*/ebin \
+	-pa ${ROOT}/ebin \
+	-pa ${ROOT}/deps/*/ebin \
+	-pa ${ROOT}/apps/*/ebin \
 	-kernel inet_dist_listen_min 32100 \
 	-kernel inet_dist_listen_max 32199 \
 	+P 1000000 \
@@ -116,7 +116,7 @@ unit: all
 	@./rebar skip_deps=true eunit
 
 test:
-	erl ${EFLAGS} -run deb test test/${TEST}.config
+	@erl ${EFLAGS} -run deb test test/${TEST}.config
 
 docs:
 	@./rebar skip_deps=true doc
