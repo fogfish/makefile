@@ -8,7 +8,7 @@
 ##   application version schema (based on semantic version)
 ##   ${APP}-${VSN}+${GIT}.${ARCH}.${PLAT}
 ##
-## @version 0.7.2
+## @version 0.8.0
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -23,11 +23,11 @@ ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
 HEAD?= $(shell git rev-parse --short HEAD)
 TAG  = ${HEAD}.${ARCH}.${PLAT}
-TEST?= priv/${APP}.benchmark
+TEST?= ${APP}
 S3   =
 GIT ?= 
 VMI  = 
-NET ?= en0
+NET ?= lo0
 USER =
 PASS =
 
@@ -112,8 +112,11 @@ clean:
 distclean: clean 
 	@./rebar delete-deps
 
-test: all
+unit: all
 	@./rebar skip_deps=true eunit
+
+test:
+	erl ${EFLAGS} -run deb test test/${TEST}.config
 
 docs:
 	@./rebar skip_deps=true doc
@@ -140,7 +143,7 @@ ${TAR}:
 	@echo "==> docker run ${VMI}" ;\
 	K=`test ${PASS} && cat  ${PASS}` ;\
 	A=`test ${USER} && echo "mkdir -p /root/.ssh && echo \"$$K\" > /root/.ssh/id_rsa && chmod 0700 /root/.ssh/id_rsa && echo -e \"Host *\n\tUser ${USER}\n\tStrictHostKeyChecking no\n\" > /root/.ssh/config &&"` ;\
-	I=`docker run -d -t ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
+	I=`docker run -d -a stdout -a stderr ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
 	(docker attach $$I &) ;\
 	docker cp $$I:/tmp/${APP}/${TAR} . 1> /dev/null 2>&1 ;\
 	while [ $$? -ne 0 ] ;\
@@ -205,7 +208,7 @@ run:
 
 benchmark:
 	@echo "==> benchmark: ${TEST}" ;\
-	$(BB)/basho_bench -N bb@127.0.0.1 -C nocookie ${TEST} ;\
+	$(BB)/basho_bench -N bb@127.0.0.1 -C nocookie priv/${TEST}.benchmark ;\
 	$(BB)/priv/summary.r -i tests/current ;\
 	open tests/current/summary.png
 
@@ -229,5 +232,5 @@ endif
 ##
 #####################################################################
 rebar:
-	@curl -L -O https://raw.githubusercontent.com/wiki/basho/rebar/rebar ; \
+	@curl -L -O https://github.com/rebar/rebar/wiki/rebar ; \
 	chmod ugo+x rebar
