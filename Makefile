@@ -8,7 +8,7 @@
 ##   application version schema (based on semantic version)
 ##   ${APP}-${VSN}+${GIT}.${ARCH}.${PLAT}
 ##
-## @version 0.8.1
+## @version 0.8.6
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -36,14 +36,17 @@ BB     = ../basho_bench
 SSHENV = /tmp/ssh-agent.conf
 ADDR   = $(shell ifconfig ${NET} | sed -En 's/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
 BRANCH = $(shell git symbolic-ref --short -q HEAD)
+COOKIE?= nocookie
 
 ## erlang flags (make run only)
 EFLAGS = \
 	-name ${APP}@${ADDR} \
-	-setcookie nocookie \
+	-setcookie ${COOKIE} \
 	-pa ${ROOT}/ebin \
 	-pa ${ROOT}/deps/*/ebin \
 	-pa ${ROOT}/apps/*/ebin \
+	-pa ${ROOT}/rel/files \
+	-pa ${ROOT}/priv \
 	-kernel inet_dist_listen_min 32100 \
 	-kernel inet_dist_listen_max 32199 \
 	+P 1000000 \
@@ -132,10 +135,13 @@ rel: ${TAR}
 
 ## assemble VM release
 ifeq (${PLAT},$(shell uname -s))
-${TAR}: 
-	@./rebar generate ${RFLAGS}; \
-	cd rel ; tar -zcf ${TAR} ${REL}${VARIANT}/ ; mv ${TAR} ../${TAR} ; cd - ;\
-	echo "==> tarball: ${TAR}"
+${TAR}:
+	@./rebar generate ${RFLAGS} ;\
+	cd rel ;\
+	test -d ${REL}${VARIANT} && tar -zcf ${TAR} ${REL}${VARIANT}/ ;\
+	test -d ${REL}${VARIANT} && mv ${TAR} ../${TAR} ;\
+	cd - ;\
+	test -f ${TAR} && echo "==> tarball: ${TAR}"
 
 else
 ifneq (${VMI},)
@@ -143,7 +149,7 @@ ${TAR}:
 	@echo "==> docker run ${VMI}" ;\
 	K=`test ${PASS} && cat  ${PASS}` ;\
 	A=`test ${USER} && echo "mkdir -p /root/.ssh && echo \"$$K\" > /root/.ssh/id_rsa && chmod 0700 /root/.ssh/id_rsa && echo -e \"Host *\n\tUser ${USER}\n\tStrictHostKeyChecking no\n\" > /root/.ssh/config &&"` ;\
-	I=`docker run -d -a stdout -a stderr ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
+	I=`docker run -d ${VMI} /bin/sh -c "$$A ${BUILDER}"` ;\
 	(docker attach $$I &) ;\
 	docker cp $$I:/tmp/${APP}/${TAR} . 1> /dev/null 2>&1 ;\
 	while [ $$? -ne 0 ] ;\
