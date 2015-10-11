@@ -8,7 +8,7 @@
 ##   application version schema (based on semantic version)
 ##   ${APP}-${VSN}+${GIT}.${ARCH}.${PLAT}
 ##
-## @version 0.8.6
+## @version 0.8.7
 .PHONY: test rel deps all pkg
 
 #####################################################################
@@ -26,7 +26,7 @@ TAG  = ${HEAD}.${ARCH}.${PLAT}
 TEST?= ${APP}
 S3   =
 GIT ?= 
-VMI  = 
+VMI ?= app/erlang:latest
 NET ?= lo0
 USER =
 PASS =
@@ -170,6 +170,8 @@ pkg: rel/deploy.sh ${TAR}
 	printf  "${BUNDLE_FREE}" >> ${PKG} ; \
 	cat  ${TAR}              >> ${PKG} ; \
 	chmod ugo+x  ${PKG}                ; \
+	rm -f ${IID}-current.${ARCH}.${PLAT}.bundle ; \
+	ln -s ${PKG} ${IID}-current.${ARCH}.${PLAT}.bundle ; \
 	echo "==> bundle: ${PKG}"
 
 ## copy 'package' to s3
