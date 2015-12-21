@@ -19,9 +19,9 @@ PREFIX ?= /usr/local
 APP ?= $(notdir $(CURDIR))
 ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
-HEAD = $(shell test -z "`git status --porcelain`" && git rev-parse --short HEAD || echo 'SNAPSHOT')
+HEAD?= $(shell test -z "`git status --porcelain`" && git rev-parse --short HEAD || echo 'SNAPSHOT')
 GTAG = $(shell git describe --abbrev=0 --tags)
-VSN ?= ${GTAG}-${HEAD}
+VSN  = ${GTAG}-${HEAD}
 REL  = ${APP}-${VSN}
 PKG  = ${REL}+${ARCH}.${PLAT}
 TEST?= ${APP}
