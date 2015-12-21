@@ -108,6 +108,7 @@ ${PKG}.tgz: Dockermake
 	docker cp $$I:/${APP}/$@ $@ ;\
 	docker rm -f $$I ;\
 	docker rmi build/${APP}:latest ;\
+	rm $< ;\
 	test -f $@ && echo "==> tarball: $@"
 
 Dockermake:
