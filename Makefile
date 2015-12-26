@@ -2,13 +2,9 @@
 ## @copyright  (c) 2012 - 2014 Dmitry Kolesnikov. All Rights Reserved
 ##
 ## @description
-##   Makefile to build and release Erlang applications using
-##   rebar, reltool, etc (see README for details)
+##   Makefile to build and release Erlang applications using standard development tools
 ##
-##   application version schema (based on semantic version)
-##   ${APP}-${VSN}+${HEAD}.${ARCH}.${PLAT}
-##
-## @version 0.9.0
+## @version 0.9.2
 
 #####################################################################
 ##
@@ -19,9 +15,7 @@ PREFIX ?= /usr/local
 APP ?= $(notdir $(CURDIR))
 ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
-HEAD?= $(shell test -z "`git status --porcelain`" && git rev-parse --short HEAD || echo 'SNAPSHOT')
-GTAG = $(shell git describe --abbrev=0 --tags)
-VSN  = ${GTAG}-${HEAD}
+VSN ?= $(shell git describe --tags --long | sed -e 's/-g[0-9a-f]*//' | sed -e 's/-0//')
 REL  = ${APP}-${VSN}
 PKG  = ${REL}+${ARCH}.${PLAT}
 TEST?= ${APP}
@@ -102,7 +96,7 @@ ${PKG}.tgz:
 	test -d rel/${REL} && tar -C rel -zcf $@ ${REL} ;\
 	test -f $@ && echo "==> tarball: $@"
 else
-${PKG}.tgz: Dockermake
+${PKG}.tgz: .git/dockermake
 	@docker build --file=$< --force-rm=true	--tag=build/${APP}:latest . ;\
 	I=`docker create build/${APP}:latest` ;\
 	docker cp $$I:/${APP}/$@ $@ ;\
@@ -111,7 +105,7 @@ ${PKG}.tgz: Dockermake
 	rm $< ;\
 	test -f $@ && echo "==> tarball: $@"
 
-Dockermake:
+.git/dockermake:
 	@echo "${BUILDER}" > $@
 endif
 
