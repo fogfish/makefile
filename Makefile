@@ -63,11 +63,12 @@ deps:
 	@./rebar get-deps
 
 clean:
-	@./rebar clean ; \
-	rm -rf test.*-temp-data ; \
-	rm -rf tests ; \
-	rm -rf log ; \
-	rm -f  *.tgz ; \
+	@./rebar clean ;\
+	rm -rf test.*-temp-data ;\
+	rm -rf tests ;\
+	rm -rf log ;\
+	rm -Rf rel/${APP}-* ;\
+	rm -f  *.tgz ;\
 	rm -f  *.bundle
 
 distclean: clean 
