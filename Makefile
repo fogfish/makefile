@@ -15,7 +15,7 @@ PREFIX ?= /usr/local
 APP ?= $(notdir $(CURDIR))
 ARCH?= $(shell uname -m)
 PLAT?= $(shell uname -s)
-VSN ?= $(shell git describe --tags --long | sed -e 's/-g[0-9a-f]*//' | sed -e 's/-0//')
+VSN ?= $(shell test -z "`git status --porcelain`" && git describe --tags --long | sed -e 's/-g[0-9a-f]*//' | sed -e 's/-0//' || echo "`git describe --abbrev=0 --tags`-SNAPSHOT")
 REL  = ${APP}-${VSN}
 PKG  = ${REL}+${ARCH}.${PLAT}
 TEST?= ${APP}
