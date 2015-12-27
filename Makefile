@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.9.2
+## @version 0.10.0
 
 #####################################################################
 ##
@@ -20,7 +20,7 @@ REL  = ${APP}-${VSN}
 PKG  = ${REL}+${ARCH}.${PLAT}
 TEST?= ${APP}
 S3  ?=
-VMI ?= sys/erlang:latest
+VMI ?= fogfish/erlang
 NET ?= lo0
 
 ## root path to benchmark framework
@@ -48,6 +48,16 @@ EFLAGS = \
 BUNDLE_INIT = PREFIX=${PREFIX}\nREL=${PREFIX}/${REL}\nAPP=${APP}\nVSN=${VSN}\nLINE=\`grep -a -n 'BUNDLE:\x24' \x240\`\ntail -n +\x24(( \x24{LINE\x25\x25:*} + 1)) \x240 | gzip -vdc - | tar -C ${PREFIX} -xvf - > /dev/null\n
 BUNDLE_FREE = exit\nBUNDLE:\n
 BUILDER = FROM ${VMI}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make && make rel\n
+CTRUN   = \
+	-module(test). \
+	-export([run/1]). \
+	run(Spec) -> \
+   	{ok, Test} = file:consult(Spec), \
+   	case lists:keyfind(node, 1, Test) of \
+      	false -> ct:run_test([{spec, Spec}]); \
+         true  -> ct_master:run(Spec) \
+   	end, \
+		erlang:halt().
 
 #####################################################################
 ##
@@ -69,17 +79,31 @@ clean:
 	rm -rf log ;\
 	rm -Rf rel/${APP}-* ;\
 	rm -f  *.tgz ;\
-	rm -f  *.bundle
+	rm -f  *.bundle ;\
+	rm -f test.erl 
 
 distclean: clean 
 	@./rebar delete-deps
 
+##
+## execute unit test
 unit: all
 	@./rebar skip_deps=true eunit
 
-test:
-	@erl ${EFLAGS} -run deb test test/${TEST}.config
+##
+## execute common test and terminate node
+test: ebin/test.beam
+	@mkdir -p /tmp/test/${APP} ;\
+	erl ${EFLAGS} -run test run test/${TEST}.config
 
+ebin/test.beam: test.erl
+	erlc -o ebin $<
+
+test.erl:
+	echo "${CTRUN}" > $@
+
+##
+##
 docs:
 	@./rebar skip_deps=true doc
 
