@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.10.0
+## @version 0.10.1
 
 #####################################################################
 ##
@@ -148,8 +148,6 @@ ${PKG}.bundle: rel/deploy.sh
 	printf  "${BUNDLE_FREE}" >> $@ ;\
 	cat  ${PKG}.tgz >> $@ ;\
 	chmod ugo+x $@ ;\
-	rm -f ${APP}-latest+${ARCH}.${PLAT}.bundle ;\
-	ln -s ${PKG} ${APP}-latest+${ARCH}.${PLAT}.bundle ;\
 	echo "==> bundle: $@"
 
 ## copy 'package' to s3
