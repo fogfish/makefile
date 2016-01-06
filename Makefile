@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.10.1
+## @version 0.10.2
 
 #####################################################################
 ##
@@ -22,6 +22,7 @@ TEST?= ${APP}
 S3  ?=
 VMI ?= fogfish/erlang
 NET ?= lo0
+IID ?= undefined
 
 ## root path to benchmark framework
 BB     = ../basho_bench
@@ -133,6 +134,15 @@ ${PKG}.tgz: .git/dockermake
 .git/dockermake:
 	@echo "${BUILDER}" > $@
 endif
+
+## build docker image
+docker: rel/files/Dockerfile
+	docker build \
+		--build-arg APP=${APP} \
+		--build-arg VSN=${VSN} \
+		-t ${IID}/${APP}:${VSN} -f $< .
+	docker tag -f ${IID}/${APP}:${VSN} ${IID}/${APP}:latest
+
 
 
 #####################################################################
