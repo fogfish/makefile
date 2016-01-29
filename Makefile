@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.10.3
+## @version 0.10.4
 
 #####################################################################
 ##
@@ -81,7 +81,8 @@ clean:
 	rm -Rf rel/${APP}-* ;\
 	rm -f  *.tgz ;\
 	rm -f  *.bundle ;\
-	rm -f test.erl 
+	rm -f test/test.erl ;\
+	rm -f test/test.beam  
 
 distclean: clean 
 	@./rebar delete-deps
@@ -93,14 +94,14 @@ unit: all
 
 ##
 ## execute common test and terminate node
-test: ebin/test.beam
+test: test/test.beam
 	@mkdir -p /tmp/test/${APP} ;\
-	erl ${EFLAGS} -run test run test/${TEST}.config
+	erl ${EFLAGS} -pa test/ -run test run test/${TEST}.config
 
-ebin/test.beam: test.erl
-	erlc -o ebin $<
+test/test.beam: test/test.erl
+	erlc -o test $<
 
-test.erl:
+test/test.erl:
 	echo "${CTRUN}" > $@
 
 ##
