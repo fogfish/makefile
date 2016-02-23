@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.11.0
+## @version 0.11.1
 
 #####################################################################
 ##
@@ -12,17 +12,18 @@
 ##
 #####################################################################
 PREFIX ?= /usr/local
-APP ?= $(notdir $(CURDIR))
-ARCH?= $(shell uname -m)
-PLAT?= $(shell uname -s)
-VSN ?= $(shell test -z "`git status --porcelain`" && git describe --tags --long | sed -e 's/-g[0-9a-f]*//' | sed -e 's/-0//' || echo "`git describe --abbrev=0 --tags`-SNAPSHOT")
-REL  = ${APP}-${VSN}
-PKG  = ${REL}+${ARCH}.${PLAT}
-TEST?= ${APP}
-S3  ?=
-VMI ?= fogfish/erlang
-NET ?= lo0
-IID ?= undefined
+APP    ?= $(notdir $(CURDIR))
+ARCH   ?= $(shell uname -m)
+PLAT   ?= $(shell uname -s)
+VSN    ?= $(shell test -z "`git status --porcelain`" && git describe --tags --long | sed -e 's/-g[0-9a-f]*//' | sed -e 's/-0//' || echo "`git describe --abbrev=0 --tags`-SNAPSHOT")
+REL     = ${APP}-${VSN}
+PKG    ?= ${REL}+${ARCH}.${PLAT}
+TEST   ?= ${APP}
+S3     ?=
+VMI    ?= fogfish/erlang
+NET    ?= lo0
+URL 	 ?= undefined
+LATEST ?= latest
 
 ## root path to benchmark framework
 BB     = ../basho_bench
@@ -134,8 +135,8 @@ docker: rel/Dockerfile
 	docker build \
 		--build-arg APP=${APP} \
 		--build-arg VSN=${VSN} \
-		-t ${IID}/${APP}:${VSN} -f $< .
-	docker tag -f ${IID}/${APP}:${VSN} ${IID}/${APP}:latest
+		-t ${URL}/${APP}:${VSN} -f $< .
+	docker tag -f ${URL}/${APP}:${VSN} ${URL}/${APP}:${LATEST}
 
 
 
