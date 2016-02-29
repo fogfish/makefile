@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.11.1
+## @version 0.11.2
 
 #####################################################################
 ##
@@ -80,7 +80,8 @@ clean:
 
 distclean: clean 
 	@./rebar3 unlock ;\
-	rm -Rf _build
+	rm -Rf _build ;\
+	rm -Rf rebar3
 
 ##
 ## execute unit test
