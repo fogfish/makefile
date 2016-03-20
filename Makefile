@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.11.3
+## @version 0.11.5
 
 #####################################################################
 ##
@@ -31,8 +31,8 @@ SSHENV = /tmp/ssh-agent.conf
 COOKIE?= nocookie
 
 ## erlang runtime flags use by `make run`
-ROOT   = `pwd`
-ADDR   = $(shell ifconfig ${NET} | sed -En 's/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' && echo "127.0.0.1")
+ROOT   = $(shell pwd)
+ADDR   = $(shell ifconfig ${NET} | sed -En 's/^${NET}:.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' && echo "127.0.0.1")
 EFLAGS = \
 	-name ${APP}@${ADDR} \
 	-setcookie ${COOKIE} \
@@ -124,7 +124,6 @@ ${PKG}.tar.gz: _build/dockermake
 	docker cp $$I:/${APP}/$@ $@ ;\
 	docker rm -f $$I ;\
 	docker rmi build/${APP}:latest ;\
-	rm $< ;\
 	test -f $@ && echo "==> tarball: $@"
 
 _build/dockermake:
