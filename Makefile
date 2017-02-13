@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.11.6
+## @version 0.11.7
 
 #####################################################################
 ##
@@ -49,7 +49,7 @@ EFLAGS = \
 ## self-extracting bundle wrapper
 BUNDLE_INIT = PREFIX=${PREFIX}\nREL=${PREFIX}/${REL}\nAPP=${APP}\nVSN=${VSN}\nLINE=`grep -a -n "BUNDLE:$$" $$0`\nmkdir -p $${REL}\ntail -n +$$(( $${LINE%%%%:*} + 1)) $$0 | gzip -vdc - | tar -C $${REL} -xvf - > /dev/null\n
 BUNDLE_FREE = exit\nBUNDLE:\n
-BUILDER = FROM ${VMI}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make && make rel\n
+BUILDER = FROM ${VMI}\nARG VERSION=\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make rel VSN=\x24{VERSION}\n
 CTRUN   = \
 	-module(test). \
 	-export([run/1]). \
@@ -122,7 +122,7 @@ relx.config: rel/relx.config.src
 	@cat $< | sed 's/release/release, {${APP}, "${VSN}"}/' > $@ 
 else
 ${PKG}.tar.gz: _build/dockermake
-	@docker build --file=$< --force-rm=true	--tag=build/${APP}:latest . ;\
+	@docker build --file=$< --force-rm=true --build-arg="VERSION=${VSN}" --tag=build/${APP}:latest . ;\
 	I=`docker create build/${APP}:latest` ;\
 	docker cp $$I:/${APP}/$@ $@ ;\
 	docker rm -f $$I ;\
