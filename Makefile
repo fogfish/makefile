@@ -4,7 +4,7 @@
 ## @description
 ##   Makefile to build and release Erlang applications using standard development tools
 ##
-## @version 0.11.10
+## @version 0.11.11
 
 #####################################################################
 ##
@@ -104,7 +104,7 @@ _build/test.beam: _build/test.erl
 	erlc -o _build $<
 
 _build/test.erl:
-	echo "${CTRUN}" > $@
+	@mkdir -p _build && echo "${CTRUN}" > $@
 
 
 #####################################################################
@@ -133,7 +133,7 @@ ${PKG}.tar.gz: _build/dockermake
 	test -f $@ && echo "==> tarball: $@"
 
 _build/dockermake:
-	@echo "${BUILDER}" > $@
+	@mkdir -p _build && echo "${BUILDER}" > $@
 endif
 
 ## build docker image
