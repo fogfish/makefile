@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  local:
+    build:
+      context: .
+      dockerfile: _build/spawner
+
+    ports:
+     - "8888:8888"
+
