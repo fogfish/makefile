@@ -1,8 +1,14 @@
-## @author     Dmitry Kolesnikov, <dmkolesnikov@gmail.com>
-## @copyright  (c) 2016 Dmitry Kolesnikov. All Rights Reserved
+##
+## Copyright (C) 2012 Dmitry Kolesnikov
+##
+## This Dockerfile may be modified and distributed under the terms
+## of the MIT license.  See the LICENSE file for details.
+## https://github.com/fogfish/makefile
 ##
 ## @doc
-##   reference docker file for Erlang applications
+##   This dockerfile is a reference container for Erlang releases
+##
+## @version 1.0.0
 FROM centos
 
 ##

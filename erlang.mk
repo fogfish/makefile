@@ -1,4 +1,13 @@
 ##
+## Copyright (C) 2012 Dmitry Kolesnikov
+##
+## This Makefile may be modified and distributed under the terms
+## of the MIT license.  See the LICENSE file for details.
+## https://github.com/fogfish/makefile
+##
+## @doc
+##   This makefile is the wrapper of rebar to build and ship erlang software
+##
 ## @version 1.0.0
 .PHONY: all compile test unit clean distclean run console benchmark rel pkg
 
@@ -178,7 +187,7 @@ _build/spawner:
 pkg: ${PKG}.tar.gz ${PKG}.bundle
 
 
-${PKG}.bundle: rel/deploy.sh
+${PKG}.bundle: rel/bootstrap.sh
 	@printf '${BUNDLE_INIT}' > $@ ;\
 	cat $<  >> $@ ;\
 	printf  '${BUNDLE_FREE}' >> $@ ;\

@@ -1,6 +1,6 @@
 ##
 ## @doc
-##   a reference Makefile to build and ship erlang libraries and application
+##   an example Makefile to build and ship erlang software
 ##
 ##   APP - identity of the application
 ##   ORG - identity of the organization 
