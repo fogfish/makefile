@@ -239,9 +239,9 @@ A typical project structure is following
 
 ## Changelog
 
-1.0.x - enable composition of multiple workflows (split files)
-0.9.x - fix and improve workflow for different production use-cases
-0.8.x - define a basic workflow use-cases
+* 1.0.x - enable composition of multiple workflows (split files)
+* 0.9.x - fix and improve workflow for different production use-cases
+* 0.8.x - define a basic workflow use-cases
 
 ## License
 
