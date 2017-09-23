@@ -8,8 +8,8 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.0
-.PHONY: all compile test unit clean distclean run console benchmark rel pkg
+## @version 1.0.1
+.PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 ##
 ## config
@@ -21,7 +21,7 @@ VSN    ?= $(shell test -z "`git status --porcelain`" && git describe --tags --lo
 LATEST ?= latest
 REL     = ${APP}-${VSN}
 PKG     = ${REL}+${ARCH}.${PLAT}
-TEST   ?= ${APP}
+TEST   ?= tests
 COOKIE ?= nocookie
 DOCKER ?= fogfish/erlang
 IID     = ${URI}${ORG}/${APP}
@@ -60,8 +60,8 @@ BOOT_CT = \
       erlang:halt(Error).
 
 ## 
-BUILDER = FROM ${DOCKER}\nARG VERSION=\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make rel VSN=\x24{VERSION}\n
-SPAWNER = FROM ${DOCKER}\nENV VERSION=${VSN}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make rel VSN=\x24{VERSION}\nCMD sh -c 'cd ${APP} && make console VSN=\x24{VERSION}'\n
+BUILDER = FROM ${DOCKER}\nARG VERSION=\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\n
+SPAWNER = FROM ${DOCKER}\nENV VERSION=${VSN}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\nCMD sh -c 'cd ${APP} && make console VSN=\x24{VERSION}'\n
 
 ## self extracting bundle archive
 BUNDLE_INIT = PREFIX=${PREFIX}\nREL=${PREFIX}/${REL}\nAPP=${APP}\nVSN=${VSN}\nLINE=`grep -a -n "BUNDLE:$$" $$0`\nmkdir -p $${REL}\ntail -n +$$(( $${LINE%%%%:*} + 1)) $$0 | gzip -vdc - | tar -C $${REL} -xvf - > /dev/null\n
@@ -75,7 +75,7 @@ BUNDLE_FREE = exit\nBUNDLE:\n
 #####################################################################
 all: rebar3 compile test
 
-compile:
+compile: rebar3
 	@./rebar3 compile
 
 
@@ -93,6 +93,12 @@ _build/test.beam: _build/test.erl
 _build/test.erl:
 	@mkdir -p _build && echo "${BOOT_CT}" > $@
 
+testclean:
+	@rm -f  _build/test.beam
+	@rm -f  _build/test.erl
+	@rm -f  test/*.beam
+	@rm -rf test.*-temp-data
+	@rm -rf tests
 
 ##
 ## execute unit test
@@ -101,24 +107,19 @@ unit: all
 
 ##
 ## clean 
-clean:
-	@./rebar3 clean
-	@rm -f  test/*.beam
+clean: testclean dockerclean
+	-@./rebar3 clean
+	@rm -Rf _build/builder
 	@rm -Rf _build/default/rel
-	@rm -f _build/spawner
-	@rm -rf test.*-temp-data
-	@rm -rf tests
 	@rm -rf log
 	@rm -f  relx.config
 	@rm -f  *.tar.gz
 	@rm -f  *.bundle
-	@docker rmi -f ${IID}:${LATEST} || echo ""
-	@docker rmi -f ${IID}:${VSN} || echo ""
 
-distclean: clean 
-	@./rebar3 unlock
-	@rm -Rf _build
-	@rm -Rf rebar3
+distclean: clean mock-rm node-rm
+	-@./rebar3 unlock
+	-@rm -Rf _build
+	-@rm rebar3
 
 #####################################################################
 ##
@@ -131,8 +132,18 @@ run:
 console: ${PKG}.tar.gz
 	@_build/default/rel/${APP}/bin/${APP} foreground
 
-mock: mock.yml
-	docker-compose -f $< up
+mock-up: test/mock/docker-compose.yml
+	@docker-compose -f $< up
+
+mock-rm: test/mock/docker-compose.yml
+	-@docker-compose -f $< down --rmi all -v --remove-orphans
+
+node-up: docker-compose.yml _build/spawner
+	@docker-compose -f $< up
+
+node-rm: docker-compose.yml
+	-@rm -f _build/spawner
+	-@docker-compose -f $< down --rmi all -v --remove-orphans	
 
 benchmark:
 	@echo "==> benchmark: ${TEST}" ;\
@@ -145,7 +156,7 @@ benchmark:
 ## release 
 ##
 #####################################################################
-rel: ${PKG}.tar.gz
+release: ${PKG}.tar.gz
 
 ## assemble VM release
 ifeq (${PLAT},$(shell uname -s))
@@ -177,14 +188,15 @@ docker: Dockerfile
 		-t ${IID}:${VSN} -f $< .
 	docker tag ${IID}:${VSN} ${IID}:${LATEST}
 
-service: local.yml _build/spawner
-	docker-compose -f $< up
+dockerclean:
+	-@docker rmi -f ${IID}:${LATEST}
+	-@docker rmi -f ${IID}:${VSN}
 
 _build/spawner:
 	@mkdir -p _build && echo "${SPAWNER}" > $@
 
 
-pkg: ${PKG}.tar.gz ${PKG}.bundle
+dist: ${PKG}.tar.gz ${PKG}.bundle
 
 
 ${PKG}.bundle: rel/bootstrap.sh

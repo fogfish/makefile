@@ -1,73 +1,194 @@
-# Erlang build script
+# Erlang Workflow (Makefile)
 
-There is a needs to build standalone Erlang software service deployable to hosts on network, such high-level package is called a _release_ in OTP. There was an attempt to use various build solution such as GNU autotools with custom M4 macros, application packaging as depicted by Erlang OTP In Action, rebar, reltool, erlang.mk and other. However, there is set of requirements which needs to be addressed to simplify production operation, see section below. Rebar and reltool with naive Makefile glue allows to achieve then. This Makefile script is one way to focus on these requirements. 
+The workflow depicts the process of distribution Erlang application from sources to the cloud. The actions of this workflow is shown with an example [here](https://github.com/fogfish/hyperion).
 
-## Requirements
+## Inspiration
 
-1. The production deployment of Erlang application performed on hosts running vanilla Linux distribution. The major assumption -- Erlang/OTP runtime __is not__ installed on target host. The application needs to package and deliver Erlang runtime along with its code.
+There was multiple attempt to design a various toolchains for building and packaging of Erlang applications such as [GNU auto tools](https://www.gnu.org/software/autoconf/manual/autoconf.html#Erlang-Libraries), application packaging as depicted by Erlang OTP In Action, [rebar](https://github.com/rebar/rebar), [reltool](http://erlang.org/doc/man/reltool.html), [erlang.mk](https://erlang.mk) and other. 
 
-1. The application life-cycle management is performed using _service_ management tools supplied by Linux distribution. The operation team can start / stop target application as a daemons using unified approach (e.g. service xxx start).
+> When you have written one or more applications, you might want to create a complete system with these applications and a subset of the Erlang/OTP applications. This is called a **release**.
 
-1. The application development and operation is performed on various environment; the development environment is built on Mac OS; the production system uses Linux distributions. The developer shall have ability to assemble of production image without access to dedicated build machines.
+The **release** contains complete system including VM binaries, which makes it a perfect distribution package -- a single file to copy into target environment. 
 
-1. The assembly of production images always managed from source code repository either private or public git. It slows down procedure of package assembly but ensure consistency of delivered code.
-
-## Background
-
-The Makefile is utility script to build and release Erlang applications. The script is a convenience wrapper for rebar and reltool. Its philosophy to perform management actions using make utility within command-line. It produces self-contained package (tar-ball or executable bundle) distributable as-is to any vanilla Linux distribution. You copy-and-execute unit on destination host, nothing else is required. The script supports simple Erlang library and complex Erlang application that are packaged inside release. The knowledge of rebar and reltool is needed. 
-
-```
-   make
-   make test
-   make benchmark
-   make pkg
-   make node pass=... host=...
-```
-
-The show-case scenario of Makefile is shown on https://github.com/fogfish/hyperion project that define an empty Erlang node.
+This **workflow** builds a distribution package of Erlang application using [rebar3](https://www.rebar3.org), [relx](https://github.com/erlware/relx) and Makefile orchestration. The workflow aims consistency of operation at developer's environment and automation CI/CD systems. 
 
 
-## Build library / application
+## Workflow
 
-The library or standalone application is simplest unit that implements some use-case, provides interface and exposes dependencies to other application. Please see Erlang manual for detail about the application concept http://www.erlang.org/doc/design_principles/applications.html
+1. Clone Erlang application(s) from public, private or enterprise GitHub repository.
+1. Set-up development environment and download dependencies.
+1. Compile application(s).
+1. Spawn backing services (mock environment).
+1. Test application(s) with Common Test framework.
+1. Debug application(s) at development console (in the shell).
+1. Debug application(s) at local Docker runtime.
+1. Uniquely identify the release version
+1. Package application(s) into Erlang release.
+1. Assemble self-installable application bundle from the release.
+1. Build a Docker image from the application bundle
+1. Ship and run the Docker image at the cloud
 
-Copy Makefile to root folder of application
+This workflow has been developed with following requirements in mind:
+
+* The production deployment of Erlang application performed on hosts running vanilla Linux distribution. The major assumption -- Erlang/OTP runtime __is not__ installed on target host. The application needs to package and deliver Erlang runtime along with its code.
+
+* The application life-cycle management is performed using _service_ management tools supplied by Linux distribution.
+
+* The application development and operation is performed at different environments; the development environment is Mac OSX; the production is either Linux or Docker runtime. The developer shall have ability to assemble of production image without access to dedicated build machines.
+
+* The assembly of production images always automatically executed by CI/CD using source code.
 
 
+## How it works
 
-### Compile
-
-```
-   make
-```
-The utility expects presence of rebar.config that define application dependencies.
-
-
-
-### Unit Test
+The workflow do not conflict with [rebar3 workflow](https://www.rebar3.org/docs/basic-usage). These scripts is a convenience wrapper for rebar3. The usage of this workflow requires Makefiles ([`Makefile`](Makefile), [`erlang.mk`](erlang.mk)) at the root of the project.
 
 ```
-   make test
+/app
+ └── ...
+ └── Makefile
+ └── erlang.mk
 ```
-Executes unit tests specified at test folder. Having ```{cover_enabled, true}.``` at rebar.config ensure compilation of coverage report.
+
+### Setup development environment
+
+Makefile **rebar3** target downloads the rebar3. The target is automatically executed during the compilation phase of the application. Makefile generates all auxiliary scripts and environment variables required by the workflow.
+
+The `rebar.config` identify dependencies of application, which are also managed by rebar3
 
 
+### Compile and Test application   
 
-### Run
+The easiest way to compile and test the application is the default Makefile target. You can also invoke **compile** and **test** targets sequentially.
 
 ```
-   make run [APP=...] [NET=...]
+make
+
+make compile
+make test
 ```
-The utility spawn Erlang VM, configures path environment to application dependencies. The node name equals to application name (the name of current folder) by default. It can be overridden using ```APP``` variable, which allows to spawn multiple node with same code base for RnD purposes. The node is bound to ip address of en0 interface. The default binding is changed through ```NET``` variable.
+
+The **test** target requires that application uses [Common Test framework](http://learnyousomeerlang.com/common-test-for-uncommon-tests). It executes tests, generates html report and returns tests coverage (you can use [coveralls integration](https://github.com/markusn/coveralls-erl) with your project).
+
+```
+/app
+ └── /test
+      └── cover.spec
+      └── tests.config
+      └── ...
+```
+
+### Spawn backing service
+
+The Erlang application might consume any service over network as part of its normal operation. These services are called [backing service](https://12factor.net/backing-services). You might spawn any external backing services within local Docker runtime for development purpose. The Makefile defines targets to spawn (**mock-up**) and tear-down (**mock-rm**) backing services. The **mock-rm** target removes all containers and images. The `test/mock/docker-compose.yml` orchestrates the process of deployment.
+
+```back
+make mock-up
+make mock-rm
+```
+
+These targets requires a `docker-compose.yml` file at `test/mock` subfolder for your project.
+
+```
+/app
+ └── /test
+      └── ...
+      └── /mock
+           └── docker-compose.yml
+```   
+
+### Run application
+
+The **run** target configures path environment, configures VM command line arguments and finally spawns Erlang runtime system **node**. The node name equals to name of application. You can spawn many nodes of same application using `APP` variable to override the node identity.
+
+```
+   make run
+   
+   make run APP=a
+   make run APP=b
+   make run APP=c
+```
+
+### Identify the release
+
+The workflow recommends to use [semantic versioning](http://semver.org) and [git tagging](https://git-scm.com/book/en/v2/Git-Basics-Tagging). It streamlines the process of artefacts labelling. The release identity consists of application name (`app`), git tag (`x.y.z`) and optional pre-release version (`n`). The unique identity is `app-x.y.z[-n]`.  
+
+```
+example-0.0.0     // initial application release
+example-0.0.0-10  // intermediate release (10 commits after version 0.0.0)
+example-0.0.1     // application release with bug fix 
+...
+example-0.0.1-26  // intermediate release (26 commits after version 0.0.1) 
+example-0.1.0     // application release with new feature
+...
+```
+
+The workflow only requires that developers assigns tags to repository in consistent manner.
 
 
+### Make release
 
-### Benchmark
+Erlang **release** is the distribution package, it includes only those application that are required for operation. Please read [this tutorial about releases](http://learnyousomeerlang.com/release-is-the-word) and [that one too](http://alancastro.org/2010/05/01/erlang-application-management-with-rebar.html).    
+
+The **rel** target uses rebar3 to generate release. This process requires a `rel/relx.config.src` file as input. 
+
+```
+make release
+```
+
+As the result, it assembles a tar-ball `app-x.y.z+arch.plat.tar.gz`. The tar-ball contains Erlang VM and all code required by the application. You can copy this tar-ball to any host and install the application using following command. 
+
+```
+tar -zxvf app-x.y.z+arch.plat.tar.gz
+```
+The `arch` and `plat` identifies CPU architecture and OS platform.
+
+```
+example-0.0.0+x86_64.Darwin.tar.gz
+example-0.0.0+x86_64.Linux.tar.gz
+```
+
+You can automate the installation process of the application using bundles. The bundle is an executable tar-ball prefixed with bootstrap shell script. This script performs installation actions e.g. discover ip address and rewrite vm.args, create init.d script, etc. This workflow provide a reference [`bootstap.sh`](bootstart.sh) 
+
+Use **dist** target to assemble bundle. The bundle production process requires `rel/bootstrap.sh` file.
+
+```
+make dist
+```  
+
+As the result it produces `app-x.y.z+arch.plat.bundle`. Copy and execute this file on the target host. 
+
+
+The cross-platform release compilation is required if you are doing development on Mac while using Linux at the cloud. The workflow facilitates cross-platform builds using concept of build toolchain as Docker container. The cross-platform build process spawns a Docker container, copies a git repository and build releases using Linux platform. You can initiate a cross-platform build using following command
+
+```
+make dist PLAT=Linux
+```
+
+### Run release
+
+You can run the release for quality acceptance purposes using **console** target. It spawns the latest version application release in foreground mode. 
+
+```
+make console
+``` 
+
+You can also spawn the release and its external backing services with-in local Docker runtime. The Makefile defines targets to spawn (**node-up**) and tear-down (**node-rm**) backing services. The **node-rm** target removes all containers and images. The [`docker-compose.yml`](docker-compose.yml) orchestrates the process of deployment.
+
+```
+make node-up
+make node-rm
+```
+
+<!--
+### Benchmark release
+
+**Note**: the benchmark requires significant improvements. 
 
 ```
    make benchmark [TEST=...]
 ```
-The command executes performance benchmark script. It spawn basho_bench along with benchmark specification supplied by application. Makefile uses the default benchmark specification defined at ```priv/${APP}.benchmark``` but ```TEST``` variable can re-define path to any specification. The benchmark procedure follows practice of basho_bench utility. It requires development of application specific benchmark driver. See http://docs.basho.com/riak/latest/ops/building/benchmarking/. The driver is defined at application src folder, specification at priv folder. Makefile contain variable BB that defined path to basho_bench executables.
+The command executes performance benchmark script. It spawn basho\_bench along with benchmark specification supplied by application. Makefile uses the default benchmark specification defined at ```priv/${APP}.benchmark``` but ```TEST``` variable can re-define path to any specification. The benchmark procedure follows practice of basho_bench utility. It requires development of application specific benchmark driver. See http://docs.basho.com/riak/latest/ops/building/benchmarking/. The driver is defined at application src folder, specification at priv folder. Makefile contain variable BB that defined path to basho_bench executables.
 
 The benchmark specification MUST defined ```code_path``` to _all_ beam objects and name of ```driver``` module.
 
@@ -78,51 +199,68 @@ The benchmark specification MUST defined ```code_path``` to _all_ beam objects a
 ...
 ```
 
+-->
 
-## Build Erlang Release
+### Build Docker image
 
-Erlang _release_ is an approach to package target application including only those application that are needed to work as-a-service. There was written tons of tutorial about release management
-
- * http://www.erlang.org/doc/man/reltool.html
- * http://learnyousomeerlang.com/release-is-the-word
- * http://alancastro.org/2010/05/01/erlang-application-management-with-rebar.html
-
-The last one explain on rebal and reltool.config
-
-
-### Tarball
+The workflow defines a `Dockerfile` that makes an executable microservice from the bundle. Use **docker** target to package the bundle.
 
 ```
-   make rel [config=...]
+make docker
 ```
-It has dependencies on reltool.config. The script assembles tarball ```{relname}-{vsn}.{arch}.{plat}.tgz```. The release name and version is extracted from ```reltool.config``` as it is defined by ```target_dir``` variable. The arch and plat is CPU architecture and OS platform e.g x86_64.Linux. The tarball contains all dependencies and virtual machine. You can copy tarball to any network host and extract it to any place ```tar -zxvf {relname}-{vsn}.{arch}.{plat}.tgz```
 
-It is possible to supply a dedicated variables overlays via ```config``` variable if the reltool uses overaly. 
+The workflow do not define a targets to **publish** and **deploy** docker images. They remains as a cloud platform extension.
 
 
-### Bundle
+## Getting started
 
-```
-   make pkg [config=...]
-```
-The bundle is an executable tarball prefixed with shell script. The bundle script performs all installation actions, e.g. discover ip address and rewrite vm.args, create init.d script, etc. The makefile uses ```rel/deploy.sh``` script to define application specific actions, the deploy script is defined with variables
+The latest version of the workflow is available at `master` branch. Copy all necessary files into your project. 
 
- * PREFIX - path to installation prefix
- * REL - path to application root folder
- * APP - application name
- * VSN - application version
-
-### Cross platform bundle
+A typical project structure is following  
 
 ```
-   make pkg PLAT=Linux [GIT=...]
+/app
+ └── ...
+ └── Makefile
+ └── erlang.mk
+ └── docker-compose.yml
+ └── Dockerfile 
+ └── /rel
+      └── bootstrap.sh
+      └── relx.config.src
+ └── /test
+      └── cover.spec
+      └── tests.config
+      └── ...
+      └── /mock
+           └── docker-compose.yml
+           └── ...
 ```
-The command assembles Linux compatible release on Mac OS. It uses docker (boot2docker Mac OS) to assemble the application. It spawn docker container and supply shell instruction to it. These instruction clones git repository and make package using make && make pkg. The resulted file is uploaded to host. It is required to define virtual machine image at Makefile (e.g. ```VMI=fogfish/otp:R16B03-1```) and prefix to git repository (e.g. ```GIT=https://github.com/fogfish```)
 
-### Deploy
+## Changelog
 
-```
-   make node pass=... host=... [PLAT=...]
-```
-The script deploys (copy-and-executed) the bundle to network host. The ```pass``` variable define path to private ssh key ```host``` is user name and host name (e.g. ```make node pass=~/.ssh/id_rsa  host=ec2-user@example.com```)
+1.0.x - enable composition of multiple workflows (split files)
+0.9.x - fix and improve workflow for different production use-cases
+0.8.x - define a basic workflow use-cases
 
+## License
+
+Copyright (c) 2012 Dmitry Kolesnikov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
