@@ -8,8 +8,12 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.1
+## @version 1.0.2
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
+
+APP := $(strip $(APP))
+ORG := $(strip $(ORG))
+URI := $(strip $(URI))
 
 ##
 ## config
@@ -117,7 +121,6 @@ clean: testclean dockerclean
 	@rm -f  *.bundle
 
 distclean: clean mock-rm node-rm
-	-@./rebar3 unlock
 	-@rm -Rf _build
 	-@rm rebar3
 
@@ -138,10 +141,10 @@ mock-up: test/mock/docker-compose.yml
 mock-rm: test/mock/docker-compose.yml
 	-@docker-compose -f $< down --rmi all -v --remove-orphans
 
-node-up: docker-compose.yml _build/spawner
+dist-up: docker-compose.yml _build/spawner
 	@docker-compose -f $< up
 
-node-rm: docker-compose.yml
+dist-rm: docker-compose.yml
 	-@rm -f _build/spawner
 	-@docker-compose -f $< down --rmi all -v --remove-orphans	
 

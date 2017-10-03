@@ -173,11 +173,11 @@ You can run the release for quality acceptance purposes using **console** target
 make console
 ``` 
 
-You can also spawn the release and its external backing services with-in local Docker runtime. The Makefile defines targets to spawn (**node-up**) and tear-down (**node-rm**) backing services. The **node-rm** target removes all containers and images. The [`docker-compose.yml`](docker-compose.yml) orchestrates the process of deployment.
+You can also spawn the release and its external backing services with-in local Docker runtime. The Makefile defines targets to spawn (**dist-up**) and tear-down (**dist-rm**) backing services. The **dist-rm** target removes all containers and images. The [`docker-compose.yml`](docker-compose.yml) orchestrates the process of deployment.
 
 ```
-make node-up
-make node-rm
+make dist-up
+make dist-rm
 ```
 
 <!--
