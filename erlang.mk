@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.2
+## @version 1.0.3
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -120,7 +120,9 @@ clean: testclean dockerclean
 	@rm -f  *.tar.gz
 	@rm -f  *.bundle
 
-distclean: clean mock-rm node-rm
+distclean: clean
+	-@make mock-rm
+	-@make dist-rm
 	-@rm -Rf _build
 	-@rm rebar3
 
