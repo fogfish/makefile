@@ -58,11 +58,14 @@ BOOT_CT = \
    -export([run/1]). \
    run(Spec) -> \
       {ok, Test} = file:consult(Spec), \
-      Error = case lists:keymember(node, 1, Test) of \
-         false -> element(2, ct:run_test([{spec, Spec}])); \
-         true  -> ct_master:run(Spec) \
-      end, \
-      erlang:halt(Error).
+      case lists:keymember(node, 1, Test) of \
+         false -> \
+            erlang:halt(element(2, ct:run_test([{spec, Spec}]))); \
+         true  -> \
+            ct_master:run(Spec), \
+            erlang:halt(0) \
+      end.
+
 
 ## 
 BUILDER = FROM ${DOCKER}\nARG VERSION=\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\n
