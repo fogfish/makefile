@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.4
+## @version 1.0.5
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -58,7 +58,7 @@ BOOT_CT = \
    -export([run/1]). \
    run(Spec) -> \
       {ok, Test} = file:consult(Spec), \
-      Error = case lists:keyfind(node, 1, Test) of \
+      Error = case lists:keymember(node, 1, Test) of \
          false -> element(2, ct:run_test([{spec, Spec}])); \
          true  -> ct_master:run(Spec) \
       end, \
