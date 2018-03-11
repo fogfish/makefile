@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.6
+## @version 1.0.8
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -39,7 +39,7 @@ BB      = ../basho_bench
 
 ## erlang runtime configration flags
 ROOT   = $(shell pwd)
-ADDR   = 127.0.0.1
+ADDR   = localhost.localdomain
 EFLAGS = \
 	-name ${APP}@${ADDR} \
 	-setcookie ${COOKIE} \
@@ -171,7 +171,7 @@ release: ${PKG}.tar.gz
 ifeq (${PLAT},$(shell uname -s))
 ${PKG}.tar.gz: relx.config
 	@./rebar3 tar -n ${APP} -v ${VSN} ;\
-	cp _build/default/rel/${APP}/${APP}-${VSN}.tar.gz $@ ;\
+	mv _build/default/rel/${APP}/${APP}-${VSN}.tar.gz $@ ;\
 	echo "==> tarball: $@"
 
 relx.config: rel/relx.config.src
