@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.8
+## @version 1.0.10
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -27,7 +27,7 @@ REL     = ${APP}-${VSN}
 PKG     = ${REL}+${ARCH}.${PLAT}
 TEST   ?= tests
 COOKIE ?= nocookie
-DOCKER ?= fogfish/erlang
+DOCKER ?= fogfish/erlang-alpine
 IID     = ${URI}${ORG}/${APP}
 
 ## required tools
@@ -69,7 +69,7 @@ BOOT_CT = \
 
 ## 
 BUILDER = FROM ${DOCKER}\nARG VERSION=\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\n
-SPAWNER = FROM ${DOCKER}\nENV VERSION=${VSN}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\nCMD sh -c 'cd ${APP} && make console VSN=\x24{VERSION}'\n
+SPAWNER = FROM ${DOCKER}\nENV VERSION=${VSN}\nRUN mkdir ${APP}\nCOPY . ${APP}/\nRUN cd ${APP} && make VSN=\x24{VERSION} && make release VSN=\x24{VERSION}\nCMD sh -c 'cd ${APP} && make console VSN=\x24{VERSION} RELX_REPLACE_OS_VARS=true ERL_NODE=${APP}'\n
 
 ## self extracting bundle archive
 BUNDLE_INIT = PREFIX=${PREFIX}\nREL=${PREFIX}/${REL}\nAPP=${APP}\nVSN=${VSN}\nLINE=`grep -a -n "BUNDLE:$$" $$0`\nmkdir -p $${REL}\ntail -n +$$(( $${LINE%%%%:*} + 1)) $$0 | gzip -vdc - | tar -C $${REL} -xvf - > /dev/null\n
@@ -148,6 +148,7 @@ mock-rm: test/mock/docker-compose.yml
 	-@docker-compose -f $< down --rmi all -v --remove-orphans
 
 dist-up: docker-compose.yml _build/spawner
+	@docker-compose build
 	@docker-compose -f $< up
 
 dist-rm: docker-compose.yml

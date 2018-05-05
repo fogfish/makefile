@@ -4,9 +4,11 @@
 ## https://github.com/fogfish/makefile
 ##
 ## @doc
-##   An example docker compose file to spawn Erlang releases  
+##   An example docker compose file to spawn Erlang releases using 
 ##
-## @version 1.0.0
+##      make dist-up 
+##
+## @version 1.0.1
 version: '3'
 
 services:
@@ -14,6 +16,9 @@ services:
     build:
       context: .
       dockerfile: _build/spawner
+
+    hostname: localhost
+    domainname: localdomain
 
     ports:
      - "8888:8888"
