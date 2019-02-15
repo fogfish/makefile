@@ -89,17 +89,22 @@ compile: rebar3
 
 ##
 ## execute common test and terminate node
-test: _build/test.beam
-	@mkdir -p /tmp/test/${APP}
-	@erl ${EFLAGS} -noshell -pa _build/ -pa test/ -run test run test/${TEST}.config
-	@F=`ls /tmp/test/${APP}/ct_run*/all.coverdata | tail -n 1` ;\
-	cp $$F /tmp/test/${APP}/ct.coverdata
+test:
+	@./rebar3 ct --config=test/${TEST}.config --cover --verbose
+	@./rebar3 cover
 
-_build/test.beam: _build/test.erl
-	@erlc -o _build $<
-
-_build/test.erl:
-	@mkdir -p _build && echo "${BOOT_CT}" > $@
+# test: _build/test.beam
+#	@mkdir -p /tmp/test/${APP}
+#	@erl ${EFLAGS} -noshell -pa _build/ -pa test/ -run test run test/${TEST}.config
+#	@F=`ls /tmp/test/${APP}/ct_run*/all.coverdata | tail -n 1` ;\
+#	cp $$F /tmp/test/${APP}/ct.coverdata
+#
+# _build/test.beam: _build/test.erl
+#	@erlc -o _build $<
+#
+# _build/test.erl:
+#	@mkdir -p _build && echo "${BOOT_CT}" > $@
+#
 
 testclean:
 	@rm -f  _build/test.beam
