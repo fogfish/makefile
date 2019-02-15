@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.10
+## @version 1.0.12
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -33,7 +33,7 @@ IID     = ${URI}${ORG}/${APP}
 ## required tools
 ##  - rebar version (no spaces at end)
 ##  - path to basho benchmark 
-REBAR  ?= 3.5.0
+REBAR  ?= 3.9.0
 BB      = ../basho_bench
 
 
@@ -192,6 +192,8 @@ endif
 
 ## build docker image
 docker: Dockerfile
+	git status --porcelain
+	test -z "`git status --porcelain`" || exit -1
 	docker build \
 		--build-arg APP=${APP} \
 		--build-arg VSN=${VSN} \
