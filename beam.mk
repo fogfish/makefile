@@ -8,7 +8,7 @@
 ## @doc
 ##   This makefile is the wrapper of rebar to build and ship erlang software
 ##
-## @version 1.0.12
+## @version 1.0.13
 .PHONY: all compile test unit clean distclean run console mock-up mock-rm benchmark release dist
 
 APP := $(strip $(APP))
@@ -33,7 +33,7 @@ IID     = ${URI}${ORG}/${APP}
 ## required tools
 ##  - rebar version (no spaces at end)
 ##  - path to basho benchmark 
-REBAR  ?= 3.9.0
+REBAR  ?= 3.12.0
 BB      = ../basho_bench
 
 
